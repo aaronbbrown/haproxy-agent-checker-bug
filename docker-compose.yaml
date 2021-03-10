@@ -1,0 +1,44 @@
+version: '3'
+services:
+  haproxy21:
+    image: haproxy:2.1
+    restart: always
+    ports:
+    - "80"
+    - "1937:1936"
+    volumes:
+    - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    - haproxy_sock:/var/run:rw
+    depends_on:
+    - nginx
+  haproxy22:
+    # haproxy:2.2-dev7 is the first version where this behavior is observed
+    # but the behavior is consistent thru 2.2.10 (latest at this time)
+    image: haproxy:2.2.10
+    restart: always
+    ports:
+    - "80"
+    - "1936:1936"
+    volumes:
+    - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    - haproxy_sock:/var/run:rw
+    depends_on:
+    - nginx
+  agentchecker:
+    image: aaronbbrown/toolbox:master
+    ports:
+    - "3333"
+    entrypoint:
+    - bash
+    - -c
+    - "echo ready,up > /tmp/acresp.txt; while : ; do cat /tmp/acresp.txt| nc -q0 -l -p 3333; done"
+    volumes:
+    - haproxy_sock:/tmp/workspace/var/run:rw
+  nginx:
+    image: nginx
+    ports:
+    - "80"
+networks:
+  default:
+volumes:
+  haproxy_sock:
